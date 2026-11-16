@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ZX Spectrum Classroom</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <header>
@@ -60,7 +60,12 @@
         <button id="save-bas" data-i18n="save">Save</button>
         <input type="file" id="bas-file" accept=".bas,.txt" hidden>
       </div>
-      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <div class="code-wrap">
+        <textarea id="code" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+        <div id="code-mark" hidden></div>
+      </div>
+      <div id="explain-editor" class="explain idle" aria-live="polite"></div>
+      <label class="check below"><input type="checkbox" class="explain-toggle" checked> <span data-i18n="explainToggle"></span></label>
       <label class="check below"><input type="checkbox" id="show-listing" checked> <span data-i18n="showListing"></span></label>
       <p class="note" data-i18n="editorNote"></p>
     </div>
@@ -74,9 +79,9 @@
       <article>
         <h3 id="lesson-title"></h3>
         <div id="lesson-text"></div>
-        <label class="check"><input type="checkbox" id="explain-on" checked> <span data-i18n="explainToggle"></span></label>
+        <label class="check"><input type="checkbox" class="explain-toggle" checked> <span data-i18n="explainToggle"></span></label>
         <div id="lesson-code"></div>
-        <p id="explain" aria-live="polite"></p>
+        <div id="explain" class="explain idle" aria-live="polite"></div>
         <button id="lesson-try" class="primary" data-i18n="tryIt">▶ Try it: run this program</button>
       </article>
     </div>
@@ -85,6 +90,6 @@
   </section>
 </main>
 
-<script type="module" src="js/main.js?v=4"></script>
+<script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>

@@ -27,6 +27,8 @@ Opening `index.html` directly from disk does not work, because browsers block mo
 - **Run shows the program first:** the Spectrum lists the program for a moment, then runs it. Untick
   "Show the program on the Spectrum before it runs" to start straight away.
 - **Learn BASIC tab:** eleven lessons. Point at any line of a lesson's program to read what that line does.
+- **Explanations in the editor:** point at, or click in, any line of an example or of your own program
+  and the page explains each instruction on it, including typing mistakes such as a missing line number.
 - **Language:** the button in the header switches the page, lessons and explanations between English and Georgian.
 - **Model:** switch between the 48K (single-key keywords) and the 128K (type keywords letter by letter,
   three-channel sound).
@@ -62,6 +64,7 @@ npm run test:cpu  # Z80 instruction exercisers (about two minutes)
 | `js/main.js` | Page logic: display, audio, keyboard, editor |
 | `js/examples.js` | Example programs shown in the editor |
 | `js/tutorial.js` | Lessons and line-by-line explanations (English and Georgian) |
+| `js/explain.js` | Automatic explanation of any BASIC line (English and Georgian) |
 | `js/i18n.js` | Page text in English and Georgian |
 | `roms/` | Sinclair ROM images (see `roms/README.md`) |
 | `test/` | Headless tests and the Z80 exerciser programs |

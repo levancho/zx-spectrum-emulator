@@ -1,8 +1,9 @@
-import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=4';
-import { tokenise, makeTap } from './basic.js?v=4';
-import { EXAMPLES } from './examples.js?v=4';
-import { LESSONS } from './tutorial.js?v=4';
-import { STR } from './i18n.js?v=4';
+import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=5';
+import { tokenise, makeTap } from './basic.js?v=5';
+import { EXAMPLES } from './examples.js?v=5';
+import { LESSONS } from './tutorial.js?v=5';
+import { STR } from './i18n.js?v=5';
+import { explainLine } from './explain.js?v=5';
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -42,6 +43,7 @@ function applyLanguage() {
   ls.length = 0;
   LESSONS.forEach((l, i) => ls.add(new Option(l.title[lang], String(i))));
   showLesson(lesson);
+  explainEditor(editorLine);
   setFocusHint(document.activeElement === wrap);
   if (lastMessage) say(lastMessage.key, lastMessage.kind, lastMessage.params);
 }
@@ -255,6 +257,7 @@ function useProgram(text, name) {
   if (mine.trim() && mine !== text) { store.set('zx.backup', mine); $('restore').hidden = false; }
   code.value = text;
   store.set('zx.program', text);
+  explainEditor(-1);
   if (run()) say('msgRunning', 'ok', { name });
 }
 $('examples').addEventListener('change', e => {
@@ -286,16 +289,17 @@ $('tab-learn').addEventListener('click', () => showTab('learn'));
 let lesson = Math.min(LESSONS.length - 1, Math.max(0, Number(store.get('zx.lesson')) || 0));
 const lessonCode = l => l.lines.map(x => x[0]).join('\n') + '\n';
 
+const explainOn = () => store.get('zx.explain') !== '0';
 function explain(row) {
-  const on = $('explain-on').checked;
+  const on = explainOn();
   document.querySelectorAll('#lesson-code .code-line').forEach(el => el.classList.toggle('active', on && el === row));
   const box = $('explain');
-  if (!on) { box.textContent = t('explainOff'); box.className = 'idle'; return; }
-  if (!row) { box.textContent = t('explainHint'); box.className = 'idle'; return; }
+  if (!on) { box.textContent = t('explainOff'); box.className = 'explain idle'; return; }
+  if (!row) { box.textContent = t('explainHint'); box.className = 'explain idle'; return; }
   const line = LESSONS[lesson].lines[Number(row.dataset.index)];
   const num = /^\d+/.exec(line[0])[0];
   box.innerHTML = `<strong>${escapeHtml(t('lineLabel', { n: num }))}:</strong> ${escapeHtml(line[lang === 'ka' ? 2 : 1])}`;
-  box.className = '';
+  box.className = 'explain';
 }
 function showLesson(i) {
   lesson = Math.min(LESSONS.length - 1, Math.max(0, i));
@@ -323,8 +327,51 @@ $('lesson-select').addEventListener('change', e => showLesson(Number(e.target.va
 $('lesson-prev').addEventListener('click', () => showLesson(lesson - 1));
 $('lesson-next').addEventListener('click', () => showLesson(lesson + 1));
 $('lesson-try').addEventListener('click', () => useProgram(lessonCode(LESSONS[lesson]), LESSONS[lesson].title[lang]));
-$('explain-on').checked = store.get('zx.explain') !== '0';
-$('explain-on').addEventListener('change', e => { store.set('zx.explain', e.target.checked ? '1' : '0'); explain(null); });
+const toggles = document.querySelectorAll('.explain-toggle');
+toggles.forEach(box => {
+  box.checked = explainOn();
+  box.addEventListener('change', () => {
+    store.set('zx.explain', box.checked ? '1' : '0');
+    toggles.forEach(other => { other.checked = box.checked; });
+    explain(null);
+    explainEditor(editorLine);
+  });
+});
+
+// ---------- explanations for the program in the editor ----------
+let editorLine = -1;
+function explainEditor(index) {
+  editorLine = index;
+  const box = $('explain-editor'), mark = $('code-mark');
+  const text = index >= 0 ? code.value.split('\n')[index] : undefined;
+  const result = explainOn() && text !== undefined ? explainLine(text, lang) : null;
+  if (!result) {
+    mark.hidden = true;
+    box.textContent = t(explainOn() ? 'explainEditorHint' : 'explainOff');
+    box.className = 'explain idle';
+    return;
+  }
+  const cs = getComputedStyle(code), lh = parseFloat(cs.lineHeight);
+  const top = code.offsetTop + code.clientTop + parseFloat(cs.paddingTop) + index * lh - code.scrollTop;
+  mark.hidden = top < code.offsetTop || top + lh > code.offsetTop + code.offsetHeight;
+  mark.style.top = `${top}px`;
+  mark.style.height = `${lh}px`;
+  const head = result.num ? `<strong>${escapeHtml(t('lineLabel', { n: result.num }))}:</strong> ` : '';
+  box.innerHTML = result.parts.length === 1 ? head + result.parts[0] : `${head}<ol>${result.parts.map(p => `<li>${p}</li>`).join('')}</ol>`;
+  box.className = 'explain';
+}
+function lineAtPointer(e) {
+  const cs = getComputedStyle(code);
+  const y = e.clientY - code.getBoundingClientRect().top - code.clientTop - parseFloat(cs.paddingTop) + code.scrollTop;
+  const index = Math.floor(y / parseFloat(cs.lineHeight));
+  return index >= 0 && index < code.value.split('\n').length ? index : -1;
+}
+const caretLine = () => code.value.slice(0, code.selectionStart).split('\n').length - 1;
+code.addEventListener('pointermove', e => { const i = lineAtPointer(e); if (i !== editorLine) explainEditor(i); });
+code.addEventListener('pointerleave', () => explainEditor(document.activeElement === code ? caretLine() : -1));
+for (const ev of ['keyup', 'click', 'input']) code.addEventListener(ev, () => explainEditor(caretLine()));
+code.addEventListener('scroll', () => explainEditor(editorLine));
+code.addEventListener('blur', () => explainEditor(-1));
 
 // ---------- files ----------
 function download(name, data, type) {
