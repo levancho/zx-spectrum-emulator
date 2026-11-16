@@ -200,6 +200,16 @@ export class Spectrum {
         ok = want === have;
       }
       cpu.f = ok ? cpu.f | 1 : cpu.f & ~1;
+      if (ok && this.cleanLoad && this.tapePos >= this.tape.length) {
+        // Wipe the ROM's "Program: name" line so the program starts on an empty screen.
+        this.cleanLoad = false;
+        const rd = a => cpu.bus.read(a), wr = (a, v) => cpu.bus.write(a, v);
+        for (let a = 0x4000; a < 0x5800; a++) wr(a, 0);
+        const attr = rd(23693);
+        for (let a = 0x5800; a < 0x5b00; a++) wr(a, attr);
+        wr(23684, 0x00); wr(23685, 0x40); // DF_CC: top-left of the display file
+        wr(23688, 33); wr(23689, 24);     // S_POSN: column and line of the print position
+      }
     } else {
       const len = cpu.de, blk = new Uint8Array(len + 2);
       let x = blk[0] = cpu.a;
@@ -223,7 +233,9 @@ export class Spectrum {
   // Resets, loads a tape image through the ROM's own LOAD "" and lets it auto-run.
   loadAndRun(tap) {
     this.reset();
+    this.releaseAllKeys();
     this.setTape(tap);
+    this.cleanLoad = true;
     for (let i = 0; i < (this.is128 ? 180 : 110); i++) this.runFrame();
     if (this.is128) this.typeKeys([['ENTER']]); // first menu entry is "Tape Loader"
     else this.typeKeys([['J'], ['SYM', 'P'], ['SYM', 'P'], ['ENTER']]);

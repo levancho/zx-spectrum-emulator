@@ -49,3 +49,18 @@ summary { cursor: pointer; font-size: 14px; color: var(--muted); margin-bottom: 
 #keyboard em { position: absolute; top: 2px; right: 4px; font-style: normal; font-size: 10px; color: #ff6b61; white-space: nowrap; }
 #keyboard button.latched { background: var(--accent); color: #002; border-color: var(--accent); }
 #keyboard button.latched small { color: #002; }
+
+.tutorial { grid-column: 1 / -1; }
+h2 { margin: 0 0 12px; font-size: 18px; }
+h3 { margin: 0 0 8px; font-size: 16px; }
+.lessons { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; }
+@media (max-width: 760px) { .lessons { grid-template-columns: minmax(0, 1fr); } }
+#lesson-list { display: flex; flex-direction: column; gap: 4px; }
+#lesson-list button { text-align: left; }
+#lesson-list button[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
+article { line-height: 1.6; font-size: 15px; max-width: 70ch; }
+article p, article ul { margin: 0 0 10px; }
+article ul { padding-left: 20px; }
+code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; }
+code { background: #101114; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: .92em; }
+pre { background: #101114; border: 1px solid var(--line); border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 14px; line-height: 1.5; margin: 0 0 12px; }

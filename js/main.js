@@ -1,6 +1,7 @@
 import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js';
 import { tokenise, makeTap } from './basic.js';
 import { EXAMPLES } from './examples.js';
+import { LESSONS } from './tutorial.js';
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -173,13 +174,69 @@ function run() {
   if (!machine) { say('The Spectrum cannot start without its ROM files.', 'error'); return; }
   const { bytes, firstLine, errors } = tokenise(code.value);
   if (errors.length) { say(errors.join(' '), 'error'); return; }
+  held.clear();
   const ok = machine.loadAndRun(makeTap(bytes, 'program', firstLine));
-  say(ok ? 'Program sent to the Spectrum and started.' : 'The Spectrum did not accept the program. Press Reset and try again.', ok ? 'ok' : 'error');
+  say(ok ? 'Program started. When it ends, the Spectrum shows a report such as "0 OK" at the bottom of its screen.' : 'The Spectrum did not accept the program. Press Reset and try again.', ok ? 'ok' : 'error');
   wrap.focus();
 }
 $('run').addEventListener('click', run);
 code.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); } });
 code.addEventListener('input', () => store.set('zx.program', code.value));
+
+// Typing into the editor through execCommand keeps the browser's undo history working.
+function editorInsert(text, from, to) {
+  code.setSelectionRange(from, to);
+  const done = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
+  if (!done) code.setRangeText(text, from, to, 'end');
+  store.set('zx.program', code.value);
+}
+// Enter at the end of a numbered line starts the next line with the next number.
+code.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.isComposing) return;
+  const v = code.value, pos = code.selectionStart;
+  if (pos !== code.selectionEnd) return;
+  const ls = v.lastIndexOf('\n', pos - 1) + 1;
+  let le = v.indexOf('\n', pos);
+  if (le < 0) le = v.length;
+  if (v.slice(pos, le).trim()) return; // cursor in the middle of a line: ordinary new line
+  const m = /^\s*(\d+)\s*(.*)$/.exec(v.slice(ls, le));
+  if (!m) return;
+  e.preventDefault();
+  if (!m[2]) { editorInsert('', ls, le); return; } // a number with nothing after it: take it away
+  const n = Number(m[1]), following = /^\s*(\d+)/.exec(v.slice(le + 1));
+  let next = n + 10;
+  if (following && next >= Number(following[1])) next = Math.floor((n + Number(following[1])) / 2);
+  editorInsert(next > n && next <= 9999 ? `\n${next} ` : '\n', le, le);
+});
+code.addEventListener('focus', () => { if (!code.value.trim()) { code.value = '10 '; code.setSelectionRange(3, 3); } });
+
+// ---------- lessons ----------
+let lesson = 0;
+function showLesson(i) {
+  lesson = i;
+  const l = LESSONS[i];
+  $('lesson-title').textContent = l.title;
+  $('lesson-text').innerHTML = l.text;
+  $('lesson-code').textContent = l.code;
+  [...$('lesson-list').children].forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
+  store.set('zx.lesson', String(i));
+}
+LESSONS.forEach((l, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = l.title;
+  b.addEventListener('click', () => showLesson(i));
+  $('lesson-list').appendChild(b);
+});
+$('lesson-try').addEventListener('click', () => {
+  const l = LESSONS[lesson];
+  if (code.value.trim() && code.value !== l.code && !confirm('Replace the program in the editor with this lesson\'s program?')) return;
+  code.value = l.code;
+  store.set('zx.program', code.value);
+  say('Lesson program is in the editor. Press Run to start it.');
+  $('run').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+showLesson(Math.min(LESSONS.length - 1, Math.max(0, Number(store.get('zx.lesson')) || 0)));
 
 for (const [i, ex] of EXAMPLES.entries()) $('examples').add(new Option(ex.name, String(i)));
 $('examples').addEventListener('change', e => {

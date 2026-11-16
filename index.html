@@ -53,7 +53,20 @@
     </div>
     <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="BASIC program"></textarea>
     <p id="message" role="status"></p>
-    <p class="note">Type your program normally, one numbered line per row, then press <strong>Run</strong>. Keywords can be upper or lower case; put a space after each keyword. Your program is kept in this browser between visits.</p>
+    <p class="note">Type one instruction per row and press <strong>Run</strong>. Each row starts with a line number; pressing Enter adds the next one for you. When a program ends, the Spectrum shows a report such as <code>0 OK, 30:1</code>, meaning "no error, stopped at line 30". New to BASIC? Start with the lessons below.</p>
+  </section>
+
+  <section class="tutorial">
+    <h2>Learn BASIC</h2>
+    <div class="lessons">
+      <nav id="lesson-list" aria-label="Lessons"></nav>
+      <article>
+        <h3 id="lesson-title"></h3>
+        <div id="lesson-text"></div>
+        <pre id="lesson-code"></pre>
+        <button id="lesson-try" class="primary">Try it: put this program in the editor</button>
+      </article>
+    </div>
   </section>
 </main>
 
