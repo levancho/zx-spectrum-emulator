@@ -114,7 +114,7 @@ function tokeniseLine(text) {
   return out;
 }
 
-// Returns { bytes: Uint8Array, firstLine, errors: [string] }
+// Returns { bytes: Uint8Array, firstLine, errors: [{ key, row? }] }
 export function tokenise(source) {
   const lines = new Map();
   const errors = [];
@@ -124,7 +124,7 @@ export function tokenise(source) {
     const m = /^\s*(\d+)\s?(.*)$/.exec(raw);
     let n, body;
     if (m) { n = parseInt(m[1], 10); body = m[2]; } else { n = last + 10; body = raw.trim(); }
-    if (n < 1 || n > 9999) { errors.push(`Row ${idx + 1}: line numbers must be between 1 and 9999.`); return; }
+    if (n < 1 || n > 9999) { errors.push({ key: 'errRange', row: idx + 1 }); return; }
     last = n;
     lines.set(n, body.replace(/\s+$/, ''));
   });
@@ -135,7 +135,7 @@ export function tokenise(source) {
     body.push(0x0d);
     out.push(n >> 8, n & 255, body.length & 255, body.length >> 8, ...body);
   }
-  if (!sorted.length) errors.push('There is no program to run yet.');
+  if (!sorted.length) errors.push({ key: 'errEmpty' });
   return { bytes: Uint8Array.from(out), firstLine: sorted[0] ?? 0, errors };
 }
 

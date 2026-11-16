@@ -1,7 +1,8 @@
-import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js';
-import { tokenise, makeTap } from './basic.js';
-import { EXAMPLES } from './examples.js';
-import { LESSONS } from './tutorial.js';
+import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=4';
+import { tokenise, makeTap } from './basic.js?v=4';
+import { EXAMPLES } from './examples.js?v=4';
+import { LESSONS } from './tutorial.js?v=4';
+import { STR } from './i18n.js?v=4';
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -12,6 +13,39 @@ const store = {
 const roms = {};
 let machine = null;
 let audio = null, nextAudioT = 0;
+
+// ---------- language ----------
+let lang = store.get('zx.lang') || ((navigator.language || '').toLowerCase().startsWith('ka') ? 'ka' : 'en');
+if (!STR[lang]) lang = 'en';
+function t(key, params = {}) {
+  let s = STR[lang][key] ?? STR.en[key] ?? key;
+  for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, v);
+  return s;
+}
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let lastMessage = null;
+function say(key, kind = '', params = {}) {
+  lastMessage = key ? { key, kind, params } : null;
+  $('message').textContent = key ? t(key, params) : '';
+  $('message').className = kind;
+}
+function applyLanguage() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  $('lang').textContent = t('langButton');
+  const ex = $('examples');
+  ex.length = 0;
+  ex.add(new Option(t('examples'), ''));
+  STR[lang].exampleNames.forEach((name, i) => ex.add(new Option(name, String(i))));
+  const ls = $('lesson-select');
+  ls.length = 0;
+  LESSONS.forEach((l, i) => ls.add(new Option(l.title[lang], String(i))));
+  showLesson(lesson);
+  setFocusHint(document.activeElement === wrap);
+  if (lastMessage) say(lastMessage.key, lastMessage.kind, lastMessage.params);
+}
+$('lang').addEventListener('click', () => { lang = lang === 'en' ? 'ka' : 'en'; store.set('zx.lang', lang); applyLanguage(); });
 
 // ---------- ROMs ----------
 async function fetchRom(name) {
@@ -26,14 +60,13 @@ function romsFor(model) {
   if (model === '48') return roms['48.rom'] ? [roms['48.rom']] : null;
   return roms['128-0.rom'] && roms['128-1.rom'] ? [roms['128-0.rom'], roms['128-1.rom']] : null;
 }
-
 function startMachine(model) {
   const set = romsFor(model);
   $('rom-missing').hidden = !!set;
   if (!set) { machine = null; return; }
   machine = new Spectrum(model, set);
   if (audio) machine.sampleRate = audio.sampleRate;
-  machine.onSave = (blocks, complete) => { if (complete) { $('save-tap').disabled = false; say('The Spectrum saved a program. Use "Download saved tape" to keep it.', 'ok'); } };
+  machine.onSave = (blocks, complete) => { if (complete) { $('save-tap').disabled = false; say('msgSaved', 'ok'); } };
   $('save-tap').disabled = true;
   store.set('zx.model', model);
 }
@@ -106,15 +139,17 @@ function syncKeys() {
   }
 }
 const wrap = $('screen-wrap');
+function setFocusHint(on) { $('focus-hint').className = on ? 'on' : ''; $('focus-hint').textContent = t(on ? 'hintOn' : 'hintOff'); }
 wrap.addEventListener('keydown', e => {
   if (e.metaKey) return;
   const m = mapKey(e);
   if (!m) return;
   e.preventDefault();
   ensureAudio();
-  if (e.repeat && held.has(e.code || e.key)) { held.get(e.code || e.key).released = false; return; }
+  const id = e.code || e.key;
+  if (e.repeat && held.has(id)) { held.get(id).released = false; return; }
   m.downFrame = machine ? machine.frame : 0;
-  held.set(e.code || e.key, m);
+  held.set(id, m);
   syncKeys();
 });
 // A released key stays down until the Spectrum has run three frames with it, so a quick tap is never missed.
@@ -129,8 +164,8 @@ function releaseKeys() {
   }
   if (changed) syncKeys();
 }
-wrap.addEventListener('blur', () => { held.clear(); syncKeys(); $('focus-hint').className = ''; $('focus-hint').textContent = 'Click the screen to type on the Spectrum.'; });
-wrap.addEventListener('focus', () => { $('focus-hint').className = 'on'; $('focus-hint').textContent = 'Typing goes to the Spectrum.'; });
+wrap.addEventListener('blur', () => { held.clear(); syncKeys(); setFocusHint(false); });
+wrap.addEventListener('focus', () => setFocusHint(true));
 wrap.addEventListener('pointerdown', ensureAudio);
 
 // On-screen keyboard: [key, label, keyword, symbol]
@@ -167,19 +202,23 @@ for (const [key, label, word, sym] of LAYOUT) {
 
 // ---------- editor ----------
 const code = $('code');
-function say(text, kind = '') { $('message').textContent = text; $('message').className = kind; }
 
+// Sends the editor's program to the Spectrum. Returns true when it was accepted.
 function run() {
   ensureAudio();
-  if (!machine) { say('The Spectrum cannot start without its ROM files.', 'error'); return; }
+  if (!machine) { say('msgNoRom', 'error'); return false; }
   const { bytes, firstLine, errors } = tokenise(code.value);
-  if (errors.length) { say(errors.join(' '), 'error'); return; }
+  if (errors.length) { say(errors[0].key, 'error', errors[0]); return false; }
   held.clear();
-  const ok = machine.loadAndRun(makeTap(bytes, 'program', firstLine));
-  say(ok ? 'Program started. When it ends, the Spectrum shows a report such as "0 OK" at the bottom of its screen.' : 'The Spectrum did not accept the program. Press Reset and try again.', ok ? 'ok' : 'error');
-  wrap.focus();
+  const list = $('show-listing').checked;
+  const ok = machine.loadAndRun(makeTap(bytes, 'program', list ? -1 : firstLine), list);
+  say(ok ? 'msgStarted' : 'msgRejected', ok ? 'ok' : 'error');
+  if (ok) wrap.focus({ preventScroll: true });
+  return ok;
 }
 $('run').addEventListener('click', run);
+$('show-listing').checked = store.get('zx.listing') !== '0';
+$('show-listing').addEventListener('change', e => store.set('zx.listing', e.target.checked ? '1' : '0'));
 code.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); } });
 code.addEventListener('input', () => store.set('zx.program', code.value));
 
@@ -210,45 +249,84 @@ code.addEventListener('keydown', e => {
 });
 code.addEventListener('focus', () => { if (!code.value.trim()) { code.value = '10 '; code.setSelectionRange(3, 3); } });
 
-// ---------- lessons ----------
-let lesson = 0;
-function showLesson(i) {
-  lesson = i;
-  const l = LESSONS[i];
-  $('lesson-title').textContent = l.title;
-  $('lesson-text').innerHTML = l.text;
-  $('lesson-code').textContent = l.code;
-  [...$('lesson-list').children].forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
-  store.set('zx.lesson', String(i));
+// Puts a ready-made program in the editor and runs it, keeping the student's own program recoverable.
+function useProgram(text, name) {
+  const mine = code.value;
+  if (mine.trim() && mine !== text) { store.set('zx.backup', mine); $('restore').hidden = false; }
+  code.value = text;
+  store.set('zx.program', text);
+  if (run()) say('msgRunning', 'ok', { name });
 }
-LESSONS.forEach((l, i) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.textContent = l.title;
-  b.addEventListener('click', () => showLesson(i));
-  $('lesson-list').appendChild(b);
-});
-$('lesson-try').addEventListener('click', () => {
-  const l = LESSONS[lesson];
-  if (code.value.trim() && code.value !== l.code && !confirm('Replace the program in the editor with this lesson\'s program?')) return;
-  code.value = l.code;
-  store.set('zx.program', code.value);
-  say('Lesson program is in the editor. Press Run to start it.');
-  $('run').scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
-showLesson(Math.min(LESSONS.length - 1, Math.max(0, Number(store.get('zx.lesson')) || 0)));
-
-for (const [i, ex] of EXAMPLES.entries()) $('examples').add(new Option(ex.name, String(i)));
 $('examples').addEventListener('change', e => {
-  const ex = EXAMPLES[e.target.value];
+  const i = e.target.value;
   e.target.value = '';
-  if (!ex) return;
-  if (code.value.trim() && code.value !== ex.code && !confirm('Replace the program in the editor with this example?')) return;
-  code.value = ex.code;
-  store.set('zx.program', code.value);
-  say(`Loaded the "${ex.name}" example. Press Run to start it.`);
+  if (EXAMPLES[i]) useProgram(EXAMPLES[i].code, STR[lang].exampleNames[i]);
+});
+$('restore').addEventListener('click', () => {
+  const b = store.get('zx.backup');
+  if (b == null) return;
+  code.value = b;
+  store.set('zx.program', b);
+  $('restore').hidden = true;
+  showTab('program');
+  say('msgRestored');
 });
 
+function showTab(name) {
+  for (const tab of ['program', 'learn']) {
+    $('panel-' + tab).hidden = tab !== name;
+    $('tab-' + tab).setAttribute('aria-selected', String(tab === name));
+  }
+  store.set('zx.tab', name);
+}
+$('tab-program').addEventListener('click', () => showTab('program'));
+$('tab-learn').addEventListener('click', () => showTab('learn'));
+
+// ---------- lessons ----------
+let lesson = Math.min(LESSONS.length - 1, Math.max(0, Number(store.get('zx.lesson')) || 0));
+const lessonCode = l => l.lines.map(x => x[0]).join('\n') + '\n';
+
+function explain(row) {
+  const on = $('explain-on').checked;
+  document.querySelectorAll('#lesson-code .code-line').forEach(el => el.classList.toggle('active', on && el === row));
+  const box = $('explain');
+  if (!on) { box.textContent = t('explainOff'); box.className = 'idle'; return; }
+  if (!row) { box.textContent = t('explainHint'); box.className = 'idle'; return; }
+  const line = LESSONS[lesson].lines[Number(row.dataset.index)];
+  const num = /^\d+/.exec(line[0])[0];
+  box.innerHTML = `<strong>${escapeHtml(t('lineLabel', { n: num }))}:</strong> ${escapeHtml(line[lang === 'ka' ? 2 : 1])}`;
+  box.className = '';
+}
+function showLesson(i) {
+  lesson = Math.min(LESSONS.length - 1, Math.max(0, i));
+  const l = LESSONS[lesson];
+  $('lesson-title').textContent = l.title[lang];
+  $('lesson-text').innerHTML = l.text[lang];
+  const box = $('lesson-code');
+  box.textContent = '';
+  l.lines.forEach((line, k) => {
+    const row = document.createElement('div');
+    row.className = 'code-line';
+    row.tabIndex = 0;
+    row.dataset.index = String(k);
+    row.textContent = line[0];
+    for (const ev of ['pointerenter', 'focus', 'click']) row.addEventListener(ev, () => explain(row));
+    box.appendChild(row);
+  });
+  explain(null);
+  $('lesson-select').value = String(lesson);
+  $('lesson-prev').disabled = lesson === 0;
+  $('lesson-next').disabled = lesson === LESSONS.length - 1;
+  store.set('zx.lesson', String(lesson));
+}
+$('lesson-select').addEventListener('change', e => showLesson(Number(e.target.value)));
+$('lesson-prev').addEventListener('click', () => showLesson(lesson - 1));
+$('lesson-next').addEventListener('click', () => showLesson(lesson + 1));
+$('lesson-try').addEventListener('click', () => useProgram(lessonCode(LESSONS[lesson]), LESSONS[lesson].title[lang]));
+$('explain-on').checked = store.get('zx.explain') !== '0';
+$('explain-on').addEventListener('change', e => { store.set('zx.explain', e.target.checked ? '1' : '0'); explain(null); });
+
+// ---------- files ----------
 function download(name, data, type) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type }));
@@ -264,21 +342,21 @@ $('bas-file').addEventListener('change', async e => {
   code.value = await f.text();
   store.set('zx.program', code.value);
   e.target.value = '';
-  say(`Opened ${f.name}.`);
+  say('msgOpened', '', { name: f.name });
 });
 
 // ---------- machine controls ----------
-$('reset').addEventListener('click', () => { if (machine) { machine.reset(); wrap.focus(); } });
-$('break').addEventListener('click', () => { if (machine) { machine.typeKeys([['CAPS', 'SPACE']], 6, 2); wrap.focus(); } });
-$('model').addEventListener('change', e => { startMachine(e.target.value); say(`Switched to the ${e.target.value}K Spectrum.`); });
+$('reset').addEventListener('click', () => { if (machine) { machine.reset(); wrap.focus({ preventScroll: true }); } });
+$('break').addEventListener('click', () => { if (machine) { machine.keyQueue.length = 0; machine.typeKeys([['CAPS', 'SPACE']], 6, 2); wrap.focus({ preventScroll: true }); } });
+$('model').addEventListener('change', e => { startMachine(e.target.value); say('msgSwitched', '', { model: e.target.value }); });
 $('open-tap').addEventListener('click', () => $('tap-file').click());
 $('tap-file').addEventListener('change', async e => {
   const f = e.target.files[0];
   if (!f || !machine) return;
   machine.setTape(new Uint8Array(await f.arrayBuffer()));
   e.target.value = '';
-  say(`Tape "${f.name}" inserted. On the Spectrum type LOAD "" (48K: press J, then " twice, then Enter).`);
-  wrap.focus();
+  say('msgTape', '', { name: f.name });
+  wrap.focus({ preventScroll: true });
 });
 $('save-tap').addEventListener('click', () => { if (machine) download('saved.tap', machine.savedTap(), 'application/octet-stream'); });
 $('rom-files').addEventListener('change', async e => {
@@ -292,6 +370,9 @@ $('rom-files').addEventListener('change', async e => {
 
 // ---------- start ----------
 code.value = store.get('zx.program') ?? EXAMPLES[0].code;
+$('restore').hidden = store.get('zx.backup') == null;
+showTab(store.get('zx.tab') === 'learn' ? 'learn' : 'program');
+applyLanguage();
 const wanted = store.get('zx.model') === '128' ? '128' : '48';
 $('model').value = wanted;
 for (const name of ['48.rom', '128-0.rom', '128-1.rom']) { const r = await fetchRom(name); if (r) roms[name] = r; }

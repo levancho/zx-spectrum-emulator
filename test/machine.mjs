@@ -31,12 +31,23 @@ for (const model of ['48', '128']) {
   check(`${model}K boots`, model === '48' ? boot.includes('1982 Sinclair Research Ltd') : boot.includes('Tape Loader') && boot.includes('128 BASIC'), boot);
 
   const { bytes, firstLine, errors } = tokenise(PROGRAM);
-  check(`${model}K tokenise`, errors.length === 0, errors.join('\n'));
+  check(`${model}K tokenise`, errors.length === 0, JSON.stringify(errors));
   const loaded = m.loadAndRun(makeTap(bytes, 'test', firstLine));
   for (let i = 0; i < 100; i++) m.runFrame();
   const out = text(m);
   const want = ['SUM=55', '7 1000 0.3 70000 5', '13 5 314', 'SUB', 'DONE', '9 STOP statement, 110:1'];
   check(`${model}K runs typed BASIC`, loaded && want.every(w => out.includes(w)) && !out.includes('BAD') && !out.includes('SKIPPED'), out);
+}
+
+// Run with the listing shown first, as the page does it
+for (const model of ['48', '128']) {
+  const m = new Spectrum(model, ROMS[model]);
+  const { bytes } = tokenise('10 REM hi\n20 PRINT "Hello"\n30 PRINT "Bye"');
+  const ok = m.loadAndRun(makeTap(bytes, 'p', -1), true);
+  let listed = false;
+  for (let i = 0; i < 400; i++) { m.runFrame(); if (text(m).includes('20 PRINT "Hello"')) listed = true; }
+  const out = text(m);
+  check(`${model}K lists, then runs`, ok && listed && out.includes('Hello') && out.includes('Bye') && out.includes('0 OK, 30:1'), out);
 }
 
 // Typing on the 48K keyboard: 10 PRINT "HI" / RUN

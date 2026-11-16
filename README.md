@@ -24,6 +24,10 @@ Opening `index.html` directly from disk does not work, because browsers block mo
 - **Spectrum keyboard:** click the screen, then type. Shift is CAPS SHIFT, Ctrl or Alt is SYMBOL SHIFT,
   Esc is BREAK. Punctuation, arrow keys and Backspace on a modern keyboard are translated for you.
   The on-screen keyboard shows which keyword each key gives on the 48K.
+- **Run shows the program first:** the Spectrum lists the program for a moment, then runs it. Untick
+  "Show the program on the Spectrum before it runs" to start straight away.
+- **Learn BASIC tab:** eleven lessons. Point at any line of a lesson's program to read what that line does.
+- **Language:** the button in the header switches the page, lessons and explanations between English and Georgian.
 - **Model:** switch between the 48K (single-key keywords) and the 128K (type keywords letter by letter,
   three-channel sound).
 - **Tapes:** `SAVE "name"` on the Spectrum is captured and can be downloaded as a `.tap` file;
@@ -57,5 +61,7 @@ npm run test:cpu  # Z80 instruction exercisers (about two minutes)
 | `js/basic.js` | Plain-text BASIC to tokenised program and `.tap` image |
 | `js/main.js` | Page logic: display, audio, keyboard, editor |
 | `js/examples.js` | Example programs shown in the editor |
+| `js/tutorial.js` | Lessons and line-by-line explanations (English and Georgian) |
+| `js/i18n.js` | Page text in English and Georgian |
 | `roms/` | Sinclair ROM images (see `roms/README.md`) |
 | `test/` | Headless tests and the Z80 exerciser programs |

@@ -230,8 +230,9 @@ export class Spectrum {
     return out;
   }
 
-  // Resets, loads a tape image through the ROM's own LOAD "" and lets it auto-run.
-  loadAndRun(tap) {
+  // Resets and loads a tape image through the ROM's own LOAD "".
+  // listFirst: the tape must not auto-run; the listing is shown for a moment, then RUN is typed.
+  loadAndRun(tap, listFirst = false) {
     this.reset();
     this.releaseAllKeys();
     this.setTape(tap);
@@ -240,7 +241,19 @@ export class Spectrum {
     if (this.is128) this.typeKeys([['ENTER']]); // first menu entry is "Tape Loader"
     else this.typeKeys([['J'], ['SYM', 'P'], ['SYM', 'P'], ['ENTER']]);
     for (let guard = 800; guard-- && (this.tapePos < this.tape.length || this.keyQueue.length);) this.runFrame();
-    return this.tapePos >= this.tape.length;
+    const ok = this.tapePos >= this.tape.length;
+    if (ok && listFirst) {
+      const wait = frames => this.keyQueue.push({ keys: [], frames });
+      for (let i = 0; i < 30; i++) this.runFrame();
+      if (this.is128) { // back at the menu: choose "128 BASIC", which shows the listing
+        this.typeKeys([['CAPS', '6']]); wait(20); this.typeKeys([['ENTER']]); wait(90);
+        this.typeKeys([['R'], ['U'], ['N'], ['ENTER']]);
+      } else {
+        this.typeKeys([['ENTER']]); wait(75); // ENTER on an empty line lists the program
+        this.typeKeys([['R'], ['ENTER']]);
+      }
+    }
+    return ok;
   }
 
   // ---- execution ----
