@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZX Spectrum Classroom</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>ZX Spectrum <span>Classroom</span></h1>
+  <div class="stripes" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+</header>
+
+<main>
+  <section class="machine">
+    <div id="screen-wrap" tabindex="0" aria-label="Spectrum screen. Click here to type on the Spectrum.">
+      <canvas id="screen" width="320" height="240"></canvas>
+      <div id="rom-missing" hidden>
+        <p><strong>ROM files not found.</strong> Serve this folder over HTTP with the <code>roms</code> folder next to this page, or choose the ROM files here (48.rom, or 128-0.rom and 128-1.rom).</p>
+        <input type="file" id="rom-files" multiple accept=".rom">
+      </div>
+    </div>
+    <p id="focus-hint">Click the screen to type on the Spectrum.</p>
+    <div class="toolbar">
+      <label>Model
+        <select id="model">
+          <option value="48">48K</option>
+          <option value="128">128K</option>
+        </select>
+      </label>
+      <button id="reset" title="Restart the computer (clears its memory)">Reset</button>
+      <button id="break" title="Stop a running program (CAPS SHIFT + SPACE)">Break</button>
+      <button id="open-tap" title="Insert a .tap tape file, then type LOAD &quot;&quot;">Insert tape…</button>
+      <button id="save-tap" disabled title="Download what the Spectrum saved with SAVE">Download saved tape</button>
+      <label class="check"><input type="checkbox" id="sound" checked> Sound</label>
+      <input type="file" id="tap-file" accept=".tap" hidden>
+    </div>
+    <details id="kbd-details" open>
+      <summary>Spectrum keyboard</summary>
+      <div id="keyboard"></div>
+      <p class="note">On the 48K, one key types a whole keyword: at the start of a line <kbd>P</kbd> gives PRINT. Hold <kbd>Ctrl</kbd> or <kbd>Alt</kbd> for SYMBOL SHIFT (red), <kbd>Shift</kbd> for CAPS SHIFT. Punctuation, arrows and Backspace on your own keyboard work directly; <kbd>Esc</kbd> is BREAK.</p>
+    </details>
+  </section>
+
+  <section class="editor">
+    <div class="toolbar">
+      <button id="run" class="primary" title="Send the program to the Spectrum and run it (Ctrl+Enter)">▶ Run</button>
+      <select id="examples" aria-label="Example programs"><option value="">Examples…</option></select>
+      <button id="open-bas">Open…</button>
+      <button id="save-bas">Save</button>
+      <input type="file" id="bas-file" accept=".bas,.txt" hidden>
+    </div>
+    <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="BASIC program"></textarea>
+    <p id="message" role="status"></p>
+    <p class="note">Type your program normally, one numbered line per row, then press <strong>Run</strong>. Keywords can be upper or lower case; put a space after each keyword. Your program is kept in this browser between visits.</p>
+  </section>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

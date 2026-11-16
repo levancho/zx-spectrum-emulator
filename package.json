@@ -1,0 +1,10 @@
+{
+  "name": "zx-spectrum-classroom",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8048",
+    "test": "node test/machine.mjs",
+    "test:cpu": "node test/zex.mjs test/zex/zexdoc.com && node test/zex.mjs test/zex/zexall.com"
+  }
+}
