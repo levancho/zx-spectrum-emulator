@@ -1,9 +1,9 @@
-import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=5';
-import { tokenise, makeTap } from './basic.js?v=5';
-import { EXAMPLES } from './examples.js?v=5';
-import { LESSONS } from './tutorial.js?v=5';
-import { STR } from './i18n.js?v=5';
-import { explainLine } from './explain.js?v=5';
+import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=7';
+import { tokenise, makeTap } from './basic.js?v=7';
+import { EXAMPLES } from './examples.js?v=7';
+import { LESSONS } from './tutorial.js?v=7';
+import { STR } from './i18n.js?v=7';
+import { explainLine } from './explain.js?v=7';
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -290,6 +290,12 @@ let lesson = Math.min(LESSONS.length - 1, Math.max(0, Number(store.get('zx.lesso
 const lessonCode = l => l.lines.map(x => x[0]).join('\n') + '\n';
 
 const explainOn = () => store.get('zx.explain') !== '0';
+// Table with every item on the line (keyword, values, punctuation) and what each one means.
+function piecesHtml(result) {
+  if (!result || !result.pieces.length) return '';
+  const rows = result.pieces.map(p => `<tr><th>${p[0]}</th><td>${p[1]}</td></tr>`).join('');
+  return `<div class="pieces-title">${escapeHtml(t('piecesTitle'))}</div><table class="pieces">${rows}</table>`;
+}
 function explain(row) {
   const on = explainOn();
   document.querySelectorAll('#lesson-code .code-line').forEach(el => el.classList.toggle('active', on && el === row));
@@ -298,7 +304,7 @@ function explain(row) {
   if (!row) { box.textContent = t('explainHint'); box.className = 'explain idle'; return; }
   const line = LESSONS[lesson].lines[Number(row.dataset.index)];
   const num = /^\d+/.exec(line[0])[0];
-  box.innerHTML = `<strong>${escapeHtml(t('lineLabel', { n: num }))}:</strong> ${escapeHtml(line[lang === 'ka' ? 2 : 1])}`;
+  box.innerHTML = `<strong>${escapeHtml(t('lineLabel', { n: num }))}:</strong> ${escapeHtml(line[lang === 'ka' ? 2 : 1])}${piecesHtml(explainLine(line[0], lang))}`;
   box.className = 'explain';
 }
 function showLesson(i) {
@@ -357,7 +363,7 @@ function explainEditor(index) {
   mark.style.top = `${top}px`;
   mark.style.height = `${lh}px`;
   const head = result.num ? `<strong>${escapeHtml(t('lineLabel', { n: result.num }))}:</strong> ` : '';
-  box.innerHTML = result.parts.length === 1 ? head + result.parts[0] : `${head}<ol>${result.parts.map(p => `<li>${p}</li>`).join('')}</ol>`;
+  box.innerHTML = (result.parts.length === 1 ? head + result.parts[0] : `${head}<ol>${result.parts.map(p => `<li>${p}</li>`).join('')}</ol>`) + piecesHtml(result);
   box.className = 'explain';
 }
 function lineAtPointer(e) {
@@ -368,10 +374,9 @@ function lineAtPointer(e) {
 }
 const caretLine = () => code.value.slice(0, code.selectionStart).split('\n').length - 1;
 code.addEventListener('pointermove', e => { const i = lineAtPointer(e); if (i !== editorLine) explainEditor(i); });
-code.addEventListener('pointerleave', () => explainEditor(document.activeElement === code ? caretLine() : -1));
+// The explanation stays when the mouse leaves, so the student can scroll down and read all of it.
 for (const ev of ['keyup', 'click', 'input']) code.addEventListener(ev, () => explainEditor(caretLine()));
 code.addEventListener('scroll', () => explainEditor(editorLine));
-code.addEventListener('blur', () => explainEditor(-1));
 
 // ---------- files ----------
 function download(name, data, type) {

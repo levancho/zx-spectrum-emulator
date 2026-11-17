@@ -28,7 +28,9 @@ Opening `index.html` directly from disk does not work, because browsers block mo
   "Show the program on the Spectrum before it runs" to start straight away.
 - **Learn BASIC tab:** eleven lessons. Point at any line of a lesson's program to read what that line does.
 - **Explanations in the editor:** point at, or click in, any line of an example or of your own program
-  and the page explains each instruction on it, including typing mistakes such as a missing line number.
+  and the page explains each instruction on it, then every piece of the line one by one: the line number,
+  the keyword, each value, and punctuation such as `;` `,` `=` and `:`. It also points out typing mistakes
+  such as a missing line number.
 - **Language:** the button in the header switches the page, lessons and explanations between English and Georgian.
 - **Model:** switch between the 48K (single-key keywords) and the 128K (type keywords letter by letter,
   three-channel sound).

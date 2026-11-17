@@ -1,5 +1,6 @@
 // Explains any line of Sinclair BASIC in plain words, in English (en) or Georgian (ka).
-// explainLine(text, lang) returns { num, parts: [html] }: one part per instruction on the line.
+// explainLine(text, lang) returns { num, parts, pieces }: a summary per instruction, plus every
+// item on the line (keyword, values, punctuation) with its own explanation.
 
 const T = {
   en: {
@@ -148,21 +149,266 @@ const T = {
   },
 };
 
+// ---------- piece-by-piece strings ----------
+const X = {
+  en: {
+    lineNum: 'The line number. The Spectrum runs the lines in order of their numbers, smallest first.',
+    sColon: 'A colon separates two instructions written on the same line. The one on the left is done first.',
+    sSemi: 'A semicolon between two things to print: the next one is printed right after this one, with no space in between.',
+    sSemiEnd: 'A semicolon at the end: the next PRINT carries on in the same row instead of starting a new row.',
+    sComma: 'A comma between two things to print: the next one starts in the other half of the screen (column 0 or column 16).',
+    sApos: 'An apostrophe starts a new row.',
+    sAtComma: 'A comma separates the row from the column.',
+    sArgComma: 'A comma separates the values this instruction needs.',
+    sLetEq: 'Here = means "becomes": the value on the right goes into the variable on the left.',
+    sForEq: 'Here = gives the counter its first value.',
+    sInSemi: 'A semicolon: you type your answer right after the question.',
+    sInComma: 'A comma: your answer starts in the other half of the screen.',
+    kText: 'Text in quotes.',
+    kNum: 'A number.',
+    kVar: 'The variable {0}: a named box that holds a number.',
+    kSVar: 'The text variable {0}: a named box that holds text. The $ at the end of the name means text.',
+    kCalc: 'A calculation. The Spectrum works out the answer first.',
+    kUses: 'It uses the value stored in {0}.',
+    xText: 'It is printed exactly as written, spaces included. The quote marks are not printed.',
+    xNum: 'It is printed as it is.',
+    xVar: 'The value stored in it is printed, not its name.',
+    xCalc: 'The answer is printed.',
+    oAdd: '<code>+</code> adds (with texts, it joins them).',
+    oSub: '<code>-</code> subtracts, or makes a number negative.',
+    oMul: '<code>*</code> multiplies.',
+    oDiv: '<code>/</code> divides.',
+    oPow: '<code>^</code> raises to a power.',
+    oLt: '<code>&lt;</code> asks "is it less than?".',
+    oGt: '<code>&gt;</code> asks "is it greater than?".',
+    oLe: '<code>&lt;=</code> asks "is it less than or equal to?".',
+    oGe: '<code>&gt;=</code> asks "is it greater than or equal to?".',
+    oNe: '<code>&lt;&gt;</code> asks "is it different from?".',
+    oEq: '<code>=</code> here asks "is it equal to?".',
+    oBr: 'Brackets <code>( )</code>: the part inside is worked out first, or it is what a function works on.',
+    oAnd: '<code>AND</code>: both tests must be true.',
+    oOr: '<code>OR</code>: at least one of the tests must be true.',
+    oNot: '<code>NOT</code> turns true into false and false into true.',
+    fVAL: 'VAL turns a text such as "12" into a number.',
+    fSTR: 'STR$ turns a number into text.',
+    fCODE: 'CODE gives the code number of a character.',
+    fPEEK: 'PEEK reads the number in a memory location.',
+    fOther: '{0} is a built-in function.',
+    kAT: 'AT chooses the place on the screen for what is printed next: first the row, then the column.',
+    kTAB: 'TAB moves along the row to a column.',
+    kInPrint: 'Inside PRINT it applies to this PRINT only.',
+    rRow: 'The row: 0 is the top row, 21 the bottom one.',
+    rCol: 'The column: 0 is the left edge, 31 the right edge.',
+    rTabCol: 'The column to move to (0 to 31).',
+    rLetName: 'The name of the variable that receives the value.',
+    rLetNameS: 'The name of the variable that receives the value. The $ at the end means it holds text.',
+    rLetVal: 'The value to store.',
+    rAsk: 'The question shown on the screen while the Spectrum waits. The quote marks are not shown.',
+    rInNum: 'The variable where your answer is stored. Its name has no $, so you must type a number.',
+    rInText: 'The text variable where your answer is stored. The $ means you can type any text.',
+    rCond: 'The test. It is either true or false.',
+    kTHEN: 'THEN: what comes after it is done only when the test is true.',
+    rForVar: 'The counter: a variable that changes each time round the loop.',
+    rFrom: 'The first value of the counter.',
+    kTO: 'TO: count up to and including the value after it.',
+    rTo: 'The last value of the counter.',
+    kSTEP: 'STEP says how much the counter changes each time. Without STEP it changes by 1.',
+    rStep: 'The amount added each time (a negative number counts down).',
+    rNextVar: 'The counter of the loop. It must be the same one as in FOR.',
+    rLineNo: 'The number of the line to jump to.',
+    rColour: 'The colour number: {0}.',
+    rColourAny: 'The colour number, 0 to 7 (0 black, 1 blue, 2 red, 3 magenta, 4 green, 5 cyan, 6 yellow, 7 white).',
+    rOnOff: '1 switches it on, 0 switches it off.',
+    rX: 'How far across: 0 is the left edge, 255 the right edge.',
+    rY: 'How far up: 0 is the bottom, 175 the top.',
+    rDx: 'How far to the right (a negative number goes left).',
+    rDy: 'How far up (a negative number goes down).',
+    rBend: 'How much the line bends, as an angle.',
+    rCx: 'The centre of the circle: how far across.',
+    rCy: 'The centre of the circle: how far up.',
+    rRadius: 'The radius: the distance from the centre to the edge.',
+    rSecs: 'How long the note lasts, in seconds.',
+    rPitch: 'The pitch: 0 is middle C, each 1 is one piano key higher, negative numbers are lower.',
+    rWait: 'How long to wait, in fiftieths of a second. 0 means: until a key is pressed.',
+    rAddr: 'The memory location.',
+    rPokeVal: 'The number to put there (0 to 255).',
+    rDim: 'The name of the array and, in brackets, how many boxes it has.',
+    rReadVar: 'A variable that receives the next value from DATA.',
+    rDataVal: 'One value in the list.',
+    rName: 'The name of the program on tape.',
+    rRemText: 'The note itself. Write anything here; the Spectrum does not read it.',
+    rValue: 'A value for this instruction.',
+    kw: {
+      REM: 'REM starts a remark, a note for people. The Spectrum ignores the rest of the line.',
+      PRINT: 'PRINT shows things on the screen.',
+      LET: 'LET stores a value in a variable.',
+      INPUT: 'INPUT waits for you to type an answer and press Enter.',
+      IF: 'IF starts a test.',
+      FOR: 'FOR starts a loop that counts.',
+      NEXT: 'NEXT marks the end of a FOR loop.',
+      GOTO: 'GO TO jumps to another line.',
+      GOSUB: 'GO SUB jumps to a subroutine and remembers where to come back to.',
+      BORDER: 'BORDER sets the colour of the border around the screen.',
+      PAPER: 'PAPER sets the background colour.',
+      INK: 'INK sets the pen colour.',
+      BRIGHT: 'BRIGHT makes colours brighter.',
+      FLASH: 'FLASH makes what is printed blink.',
+      INVERSE: 'INVERSE swaps the pen and background colours.',
+      OVER: 'OVER prints on top of what is already there.',
+      PLOT: 'PLOT draws one dot.',
+      DRAW: 'DRAW draws a line starting from the last dot.',
+      CIRCLE: 'CIRCLE draws a circle.',
+      BEEP: 'BEEP plays a note.',
+      PAUSE: 'PAUSE makes the program wait.',
+      DIM: 'DIM makes an array: a row of numbered boxes.',
+      READ: 'READ takes values from the DATA list.',
+      DATA: 'DATA holds a list of values for READ.',
+      POKE: 'POKE puts a number straight into the computer\'s memory.',
+      SAVE: 'SAVE stores the program on tape.',
+      LOAD: 'LOAD reads a program from tape.',
+      DEFFN: 'DEF FN defines your own function.',
+      OUT: 'OUT sends a number to a hardware port.',
+    },
+  },
+  ka: {
+    lineNum: 'ხაზის ნომერი. Spectrum ხაზებს ნომრების რიგით ასრულებს, უმცირესიდან დაწყებული.',
+    sColon: 'ორწერტილი ყოფს ერთ ხაზზე დაწერილ ორ ბრძანებას. ჯერ მარცხენა სრულდება.',
+    sSemi: 'წერტილ-მძიმე ორ დასაბეჭდ რამეს შორის: შემდეგი პირდაპირ ამის მერე იბეჭდება, შუაში ადგილის გამოტოვების გარეშე.',
+    sSemiEnd: 'წერტილ-მძიმე ბოლოში: შემდეგი PRINT ახალ სტრიქონზე კი არ გადავა, იმავე სტრიქონზე გააგრძელებს.',
+    sComma: 'მძიმე ორ დასაბეჭდ რამეს შორის: შემდეგი ეკრანის მეორე ნახევრიდან იწყება (სვეტი 0 ან სვეტი 16).',
+    sApos: 'აპოსტროფი ახალ სტრიქონზე გადადის.',
+    sAtComma: 'მძიმე სტრიქონს სვეტისგან ყოფს.',
+    sArgComma: 'მძიმე ყოფს მნიშვნელობებს, რომლებიც ამ ბრძანებას სჭირდება.',
+    sLetEq: 'აქ = ნიშნავს „გახდეს“: მარჯვენა მხარეს მდგომი მნიშვნელობა ინახება მარცხენა მხარეს მდგომ ცვლადში.',
+    sForEq: 'აქ = მთვლელს პირველ მნიშვნელობას აძლევს.',
+    sInSemi: 'წერტილ-მძიმე: პასუხს პირდაპირ კითხვის შემდეგ კრეფ.',
+    sInComma: 'მძიმე: პასუხი ეკრანის მეორე ნახევრიდან იწყება.',
+    kText: 'ტექსტი ბრჭყალებში.',
+    kNum: 'რიცხვი.',
+    kVar: 'ცვლადი {0}: სახელიანი ყუთი, რომელშიც რიცხვი ინახება.',
+    kSVar: 'ტექსტური ცვლადი {0}: სახელიანი ყუთი, რომელშიც ტექსტი ინახება. სახელის ბოლოს $ ნიშნავს ტექსტს.',
+    kCalc: 'გამოთვლა. Spectrum ჯერ პასუხს ითვლის.',
+    kUses: 'იყენებს მნიშვნელობას, რომელიც ინახება აქ: {0}.',
+    xText: 'იბეჭდება ზუსტად ისე, როგორც წერია, ჰარებიანად. თვითონ ბრჭყალები არ იბეჭდება.',
+    xNum: 'იბეჭდება ისე, როგორც არის.',
+    xVar: 'იბეჭდება მასში შენახული მნიშვნელობა და არა მისი სახელი.',
+    xCalc: 'იბეჭდება პასუხი.',
+    oAdd: '<code>+</code> კრებს (ტექსტებს კი აერთებს).',
+    oSub: '<code>-</code> აკლებს ან რიცხვს უარყოფითად აქცევს.',
+    oMul: '<code>*</code> ამრავლებს.',
+    oDiv: '<code>/</code> ყოფს.',
+    oPow: '<code>^</code> ხარისხში აჰყავს.',
+    oLt: '<code>&lt;</code> კითხულობს: „ნაკლებია?“',
+    oGt: '<code>&gt;</code> კითხულობს: „მეტია?“',
+    oLe: '<code>&lt;=</code> კითხულობს: „ნაკლებია ან ტოლია?“',
+    oGe: '<code>&gt;=</code> კითხულობს: „მეტია ან ტოლია?“',
+    oNe: '<code>&lt;&gt;</code> კითხულობს: „განსხვავდება?“',
+    oEq: '<code>=</code> აქ კითხულობს: „ტოლია?“',
+    oBr: 'ფრჩხილები <code>( )</code>: ჯერ ფრჩხილებში მოთავსებული ნაწილი გამოითვლება, ან ეს არის ის, რაზეც ფუნქცია მუშაობს.',
+    oAnd: '<code>AND</code>: ორივე პირობა სწორი უნდა იყოს.',
+    oOr: '<code>OR</code>: ერთი პირობა მაინც სწორი უნდა იყოს.',
+    oNot: '<code>NOT</code> სწორს მცდარად აქცევს, მცდარს კი სწორად.',
+    fVAL: 'VAL ტექსტს (მაგალითად "12") რიცხვად აქცევს.',
+    fSTR: 'STR$ რიცხვს ტექსტად აქცევს.',
+    fCODE: 'CODE სიმბოლოს კოდის ნომერს იძლევა.',
+    fPEEK: 'PEEK კითხულობს რიცხვს მეხსიერების უჯრიდან.',
+    fOther: '{0} ჩაშენებული ფუნქციაა.',
+    kAT: 'AT ირჩევს ეკრანზე ადგილს იმისთვის, რაც შემდეგ დაიბეჭდება: ჯერ სტრიქონი, შემდეგ სვეტი.',
+    kTAB: 'TAB სტრიქონის გასწვრივ გადადის მითითებულ სვეტზე.',
+    kInPrint: 'PRINT-ის შიგნით მხოლოდ ამ PRINT-ზე მოქმედებს.',
+    rRow: 'სტრიქონი: 0 ზედა სტრიქონია, 21 ქვედა.',
+    rCol: 'სვეტი: 0 მარცხენა კიდეა, 31 მარჯვენა.',
+    rTabCol: 'სვეტი, რომელზეც უნდა გადავიდეს (0-დან 31-მდე).',
+    rLetName: 'ცვლადის სახელი, რომელიც მნიშვნელობას იღებს.',
+    rLetNameS: 'ცვლადის სახელი, რომელიც მნიშვნელობას იღებს. ბოლოში $ ნიშნავს, რომ მასში ტექსტი ინახება.',
+    rLetVal: 'შესანახი მნიშვნელობა.',
+    rAsk: 'კითხვა, რომელიც ეკრანზე ჩანს, სანამ Spectrum ელოდება. ბრჭყალები არ ჩანს.',
+    rInNum: 'ცვლადი, რომელშიც შენი პასუხი ინახება. სახელში $ არ არის, ამიტომ რიცხვი უნდა აკრიფო.',
+    rInText: 'ტექსტური ცვლადი, რომელშიც შენი პასუხი ინახება. $ ნიშნავს, რომ ნებისმიერი ტექსტის აკრეფა შეგიძლია.',
+    rCond: 'პირობა. ის ან სწორია, ან მცდარი.',
+    kTHEN: 'THEN: რაც მის შემდეგ წერია, მხოლოდ მაშინ სრულდება, როცა პირობა სწორია.',
+    rForVar: 'მთვლელი: ცვლადი, რომელიც ციკლის ყოველ ბიჯზე იცვლება.',
+    rFrom: 'მთვლელის პირველი მნიშვნელობა.',
+    kTO: 'TO: დათვალე მის შემდეგ მითითებულ მნიშვნელობამდე, მისი ჩათვლით.',
+    rTo: 'მთვლელის ბოლო მნიშვნელობა.',
+    kSTEP: 'STEP ამბობს, რამდენით იცვლება მთვლელი ყოველ ჯერზე. STEP-ის გარეშე 1-ით იცვლება.',
+    rStep: 'რამდენი ემატება ყოველ ჯერზე (უარყოფითი რიცხვი უკუღმა ითვლის).',
+    rNextVar: 'ციკლის მთვლელი. ის იგივე უნდა იყოს, რაც FOR-ში.',
+    rLineNo: 'იმ ხაზის ნომერი, რომელზეც პროგრამა გადადის.',
+    rColour: 'ფერის ნომერი: {0}.',
+    rColourAny: 'ფერის ნომერი, 0-დან 7-მდე (0 შავი, 1 ლურჯი, 2 წითელი, 3 იისფერი, 4 მწვანე, 5 ცისფერი, 6 ყვითელი, 7 თეთრი).',
+    rOnOff: '1 რთავს, 0 თიშავს.',
+    rX: 'რამდენით მარჯვნივ: 0 მარცხენა კიდეა, 255 მარჯვენა.',
+    rY: 'რამდენით ზევით: 0 ქვედა კიდეა, 175 ზედა.',
+    rDx: 'რამდენით მარჯვნივ (უარყოფითი რიცხვი მარცხნივ მიდის).',
+    rDy: 'რამდენით ზევით (უარყოფითი რიცხვი ქვევით მიდის).',
+    rBend: 'რამდენად მრუდდება ხაზი (კუთხე).',
+    rCx: 'წრის ცენტრი: რამდენით მარჯვნივ.',
+    rCy: 'წრის ცენტრი: რამდენით ზევით.',
+    rRadius: 'რადიუსი: მანძილი ცენტრიდან კიდემდე.',
+    rSecs: 'რამდენ ხანს ჟღერს ნოტი, წამებში.',
+    rPitch: 'სიმაღლე: 0 პირველი ოქტავის „დო“-ა, ყოველი 1 ერთი კლავიშით მაღლაა, უარყოფითი რიცხვები უფრო დაბალია.',
+    rWait: 'რამდენ ხანს დაელოდოს, წამის ორმოცდამეათედებში. 0 ნიშნავს: კლავიშის დაჭერამდე.',
+    rAddr: 'მეხსიერების უჯრა.',
+    rPokeVal: 'რიცხვი, რომელიც იქ ჩაიწერება (0-დან 255-მდე).',
+    rDim: 'მასივის სახელი და, ფრჩხილებში, რამდენი ყუთი აქვს.',
+    rReadVar: 'ცვლადი, რომელიც DATA-დან შემდეგ მნიშვნელობას იღებს.',
+    rDataVal: 'სიის ერთი მნიშვნელობა.',
+    rName: 'პროგრამის სახელი კასეტაზე.',
+    rRemText: 'თვითონ შენიშვნა. აქ რაც გინდა დაწერე; Spectrum მას არ კითხულობს.',
+    rValue: 'მნიშვნელობა ამ ბრძანებისთვის.',
+    kw: {
+      REM: 'REM იწყებს შენიშვნას, ანუ ჩანაწერს ადამიანებისთვის. Spectrum ხაზის დანარჩენ ნაწილს გამოტოვებს.',
+      PRINT: 'PRINT ეკრანზე გამოაქვს ის, რაც მის შემდეგ წერია.',
+      LET: 'LET მნიშვნელობას ცვლადში ინახავს.',
+      INPUT: 'INPUT ელოდება, სანამ პასუხს აკრეფ და Enter-ს დააჭერ.',
+      IF: 'IF იწყებს შემოწმებას.',
+      FOR: 'FOR იწყებს ციკლს, რომელიც ითვლის.',
+      NEXT: 'NEXT აღნიშნავს FOR ციკლის ბოლოს.',
+      GOTO: 'GO TO სხვა ხაზზე გადადის.',
+      GOSUB: 'GO SUB ქვეპროგრამაზე გადადის და იმახსოვრებს, სად უნდა დაბრუნდეს.',
+      BORDER: 'BORDER აყენებს ეკრანის ჩარჩოს ფერს.',
+      PAPER: 'PAPER აყენებს ფონის ფერს.',
+      INK: 'INK აყენებს კალმის ფერს.',
+      BRIGHT: 'BRIGHT ფერებს უფრო კაშკაშას ხდის.',
+      FLASH: 'FLASH დაბეჭდილს აციმციმებს.',
+      INVERSE: 'INVERSE კალმისა და ფონის ფერებს ერთმანეთში ცვლის.',
+      OVER: 'OVER ბეჭდავს იმის ზემოდან, რაც უკვე წერია.',
+      PLOT: 'PLOT ერთ წერტილს სვამს.',
+      DRAW: 'DRAW ხაზავს ხაზს ბოლო წერტილიდან.',
+      CIRCLE: 'CIRCLE წრეს ხაზავს.',
+      BEEP: 'BEEP ნოტს უკრავს.',
+      PAUSE: 'PAUSE პროგრამას ალოდინებს.',
+      DIM: 'DIM ქმნის მასივს: დანომრილი ყუთების რიგს.',
+      READ: 'READ მნიშვნელობებს DATA-ს სიიდან იღებს.',
+      DATA: 'DATA ინახავს მნიშვნელობების სიას READ-ისთვის.',
+      POKE: 'POKE რიცხვს პირდაპირ კომპიუტერის მეხსიერებაში წერს.',
+      SAVE: 'SAVE პროგრამას კასეტაზე ინახავს.',
+      LOAD: 'LOAD პროგრამას კასეტიდან კითხულობს.',
+      DEFFN: 'DEF FN შენს საკუთარ ფუნქციას განსაზღვრავს.',
+      OUT: 'OUT რიცხვს აპარატურის პორტში აგზავნის.',
+    },
+  },
+};
+for (const l of ['en', 'ka']) Object.assign(T[l], X[l]);
+
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const codeTag = s => `<code>${esc(String(s).trim())}</code>`;
+const fill = (text, ...a) => text.replace(/\{(\d)\}/g, (_, i) => a[i] ?? '');
 
-// Splits at any of the separator characters that are outside quotes and brackets.
-function splitTop(s, seps) {
+// Splits at separator characters outside quotes and brackets. Each entry keeps the separator after it.
+function splitKeep(s, seps) {
   const out = [];
   let cur = '', depth = 0, inQ = false;
   for (const ch of s) {
     if (ch === '"') inQ = !inQ;
     if (!inQ) { if (ch === '(') depth++; else if (ch === ')') depth--; }
-    if (!inQ && depth <= 0 && seps.includes(ch)) { out.push(cur); cur = ''; } else cur += ch;
+    if (!inQ && depth <= 0 && seps.includes(ch)) { out.push({ t: cur, sep: ch }); cur = ''; } else cur += ch;
   }
-  out.push(cur);
+  out.push({ t: cur, sep: '' });
   return out;
 }
+const splitTop = (s, seps) => splitKeep(s, seps).map(x => x.t);
 // Position of a word outside quotes, or -1.
 function findWord(s, word) {
   let inQ = false;
@@ -173,51 +419,130 @@ function findWord(s, word) {
   }
   return -1;
 }
-const outsideQuotes = s => s.replace(/"[^"]*"?/g, '""');
 
+// ---------- what kind of value is this? ----------
+const NUM = /^-?\s*(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i;
+const WORD = /^[A-Za-z][A-Za-z0-9]*\$?$/;
+const TOKEN = /"[^"]*"?|(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|[A-Za-z][A-Za-z0-9]*\$?|<=|>=|<>|[-+*\/^<>=(]/g;
+const NOTE = {
+  '+': 'oAdd', '-': 'oSub', '*': 'oMul', '/': 'oDiv', '^': 'oPow', '<': 'oLt', '>': 'oGt', '<=': 'oLe', '>=': 'oGe', '<>': 'oNe', '=': 'oEq', '(': 'oBr',
+  AND: 'oAnd', OR: 'oOr', NOT: 'oNot', RND: 'fRND', INT: 'fINT', INKEY$: 'fINKEY', SQR: 'fSQR', ABS: 'fABS', LEN: 'fLEN', PI: 'fPI', SIN: 'fSIN', COS: 'fSIN',
+  CHR$: 'fCHR', VAL: 'fVAL', STR$: 'fSTR', CODE: 'fCODE', PEEK: 'fPEEK',
+};
+const BUILTIN = new Set(['TAN', 'ASN', 'ACS', 'ATN', 'LN', 'EXP', 'SGN', 'USR', 'IN', 'ATTR', 'POINT', 'SCREEN$', 'VAL$', 'FN', 'BIN']);
+const IGNORE = new Set(['TO', 'STEP', 'THEN', 'LINE', 'AT', 'TAB']);
+
+function describe(e, L) {
+  const s = e.trim(), up = s.toUpperCase();
+  if (/^"[^"]*"?$/.test(s)) return { kind: 'Text', html: L.kText };
+  if (NUM.test(s)) return { kind: 'Num', html: L.kNum };
+  if (WORD.test(s) && !NOTE[up] && !BUILTIN.has(up)) return { kind: 'Var', html: fill(s.endsWith('$') ? L.kSVar : L.kVar, codeTag(s)) };
+  const notes = [], seen = new Set(), vars = [];
+  for (const tok of s.match(TOKEN) || []) {
+    const u = tok.toUpperCase();
+    if (tok[0] === '"' || /^[\d.]/.test(tok) || IGNORE.has(u)) continue;
+    if (NOTE[u]) { if (!seen.has(NOTE[u])) { seen.add(NOTE[u]); notes.push(L[NOTE[u]]); } }
+    else if (BUILTIN.has(u)) { if (!seen.has(u)) { seen.add(u); notes.push(fill(L.fOther, codeTag(u))); } }
+    else if (/^[A-Za-z]/.test(tok) && !vars.includes(tok)) vars.push(tok);
+  }
+  if (vars.length) notes.unshift(fill(L.kUses, vars.map(codeTag).join(', ')));
+  return { kind: 'Calc', html: (WORD.test(s) ? notes : [L.kCalc, ...notes]).join(' ') };
+}
+
+const ROLES = {
+  PLOT: ['rX', 'rY'], DRAW: ['rDx', 'rDy', 'rBend'], CIRCLE: ['rCx', 'rCy', 'rRadius'], BEEP: ['rSecs', 'rPitch'], PAUSE: ['rWait'], POKE: ['rAddr', 'rPokeVal'],
+  NEXT: ['rNextVar'], GOTO: ['rLineNo'], GOSUB: ['rLineNo'], BORDER: ['rColour'], PAPER: ['rColour'], INK: ['rColour'],
+  BRIGHT: ['rOnOff'], FLASH: ['rOnOff'], INVERSE: ['rOnOff'], OVER: ['rOnOff'], SAVE: ['rName'], LOAD: ['rName'],
+};
+const REPEAT = { READ: 'rReadVar', DATA: 'rDataVal', DIM: 'rDim' };
+const PLAIN = new Set(['rNextVar', 'rReadVar', 'rDim', 'rName', 'rLineNo']);   // the role says it all
+
+// Explains one instruction. Returns { part: summary html, pieces: [[code html, explanation html]] }.
 function explainStatement(stmt, L) {
   const s = stmt.trim();
-  const tr = (key, ...args) => L[key].replace(/\{(\d)\}/g, (_, i) => args[i] ?? '');
-  if (!s) return [];
+  const tr = (key, ...args) => fill(L[key], ...args);
+  if (!s) return null;
   const m = /^(GO\s*TO|GO\s*SUB|DEF\s*FN|[A-Za-z]+)\s*(.*)$/s.exec(s);
   const kw = m ? m[1].toUpperCase().replace(/\s+/g, '') : '';
+  const shown = { GOTO: 'GO TO', GOSUB: 'GO SUB', DEFFN: 'DEF FN' }[kw] || kw;
   const rest = m ? m[2].trim() : '';
-  const colour = v => { const n = Number(v); return /^\d$/.test(v.trim()) && (n < 8 || kw !== 'BORDER') ? `${esc(L.colours[n])} (${n})` : codeTag(v); };
+  const colourName = v => (/^\d$/.test(v.trim()) && (Number(v) < 8 || kw !== 'BORDER') ? `${esc(L.colours[Number(v)])} (${Number(v)})` : null);
+  const colour = v => colourName(v) || codeTag(v);
   const args = splitTop(rest, ',').map(a => a.trim());
+  const pieces = [];
+  const word = (w, text) => pieces.push([codeTag(w), text]);
+  // One value with its role, e.g. "How far across … A number."
+  const value = (e, role) => {
+    if (!e.trim()) return;
+    if (role === 'rColour') {
+      const name = colourName(e);
+      return pieces.push([codeTag(e), name ? tr('rColour', name) : `${L.rColourAny} ${describe(e, L).html}`]);
+    }
+    pieces.push([codeTag(e), PLAIN.has(role) ? L[role] : `${L[role]} ${describe(e, L).html}`]);
+  };
+  const argList = (text, roleAt) => splitKeep(text, ',').forEach((it, i) => {
+    value(it.t, roleAt(i));
+    if (it.sep) word(',', L.sArgComma);
+  });
+  const keyword = () => word(shown, L.kw[kw] || L[kw]);
   let out;
   switch (kw) {
-    case 'REM': return [L.REM];
+    case 'REM':
+      keyword();
+      if (rest) pieces.push([codeTag(rest), L.rRemText]);
+      return { part: L.REM, pieces };
     case 'PRINT': {
-      if (!rest) return [L.printEmpty];
-      const items = [];
-      let comma = false;
-      for (const piece of splitTop(rest, ";'")) {
-        let cells = splitTop(piece, ',').map(x => x.trim());
-        const at = /^AT\s+(.*)$/is.exec(cells[0]);
-        if (at) { items.push(tr('pAt', codeTag(at[1]), codeTag(cells[1] || ''))); cells = cells.slice(2); if (!cells.length) continue; }
-        if (cells.filter(Boolean).length > 1 || (!at && cells.length > 1)) comma = true;
-        for (const it of cells.filter(Boolean)) {
-          const tab = /^TAB\s+(.*)$/is.exec(it);
-          if (it.startsWith('"')) items.push(tr('pText', codeTag(it)));
-          else if (tab) items.push(tr('pTab', codeTag(tab[1])));
-          else if (/^(INK|PAPER|BRIGHT|FLASH|INVERSE|OVER)\s/i.test(it)) items.push(tr('pColour', codeTag(it)));
-          else items.push(tr('pValue', codeTag(it)));
+      keyword();
+      if (!rest) return { part: L.printEmpty, pieces };
+      const items = [], list = splitKeep(rest, ";,'");
+      let comma = false, wantCol = false;
+      list.forEach((it, i) => {
+        const x = it.t.trim(), isCol = wantCol;
+        wantCol = false;
+        let mm, wasAt = false;
+        if (x && isCol) { value(x, 'rCol'); items[items.length - 1] = tr('pAt', items[items.length - 1], codeTag(x)); }
+        else if (x && (mm = /^AT\s*(.*)$/is.exec(x))) { wasAt = true; word('AT', L.kAT); value(mm[1], 'rRow'); items.push(codeTag(mm[1])); }
+        else if (x && (mm = /^TAB\s*(.*)$/is.exec(x))) { word('TAB', L.kTAB); value(mm[1], 'rTabCol'); items.push(tr('pTab', codeTag(mm[1]))); }
+        else if (x && (mm = /^(INK|PAPER|BRIGHT|FLASH|INVERSE|OVER)\s*(.*)$/is.exec(x))) {
+          const k = mm[1].toUpperCase();
+          word(k, `${L.kw[k]} ${L.kInPrint}`);
+          value(mm[2], k === 'INK' || k === 'PAPER' ? 'rColour' : 'rOnOff');
+          items.push(tr('pColour', codeTag(x)));
+        } else if (x) {
+          const d = describe(x, L);
+          pieces.push([codeTag(x), `${d.html} ${L['x' + d.kind]}`]);
+          items.push(tr(d.kind === 'Text' ? 'pText' : 'pValue', codeTag(x)));
         }
-      }
-      out = tr('print', items.join(L.then));
+        if (!it.sep) return;
+        if (it.sep === ',' && wasAt) { wantCol = true; return word(',', L.sAtComma); }
+        const atEnd = list.slice(i + 1).every(n => !n.t.trim());
+        if (it.sep === ',') comma = true;
+        word(it.sep, it.sep === ';' ? (atEnd ? L.sSemiEnd : L.sSemi) : it.sep === ',' ? L.sComma : L.sApos);
+      });
+      out = items.length ? tr('print', items.join(L.then)) : L.printEmpty;
       if (rest.endsWith(';')) out += ' ' + L.printStay;
       else if (comma) out += ' ' + L.printComma;
       break;
     }
     case 'LET': {
       const eq = splitTop(rest, '=');
-      const name = eq[0].trim(), value = rest.slice(eq[0].length + 1);
-      out = tr(name.endsWith('$') ? 'letText' : /^\s*-?[\d.]+\s*$/.test(value) ? 'letPut' : 'let', codeTag(name), codeTag(value));
+      const name = eq[0].trim(), val = rest.slice(eq[0].length + 1);
+      keyword();
+      if (name) pieces.push([codeTag(name), name.endsWith('$') ? L.rLetNameS : L.rLetName]);
+      if (eq.length > 1) word('=', L.sLetEq);
+      value(val, 'rLetVal');
+      out = tr(name.endsWith('$') ? 'letText' : /^\s*-?[\d.]+\s*$/.test(val) ? 'letPut' : 'let', codeTag(name), codeTag(val));
       break;
     }
     case 'INPUT': {
-      const items = splitTop(rest, ';,').map(x => x.trim()).filter(Boolean);
-      const ask = items.filter(i => i.startsWith('"')), vars = items.filter(i => !i.startsWith('"'));
+      keyword();
+      const ask = [], vars = [];
+      for (const it of splitKeep(rest, ';,')) {
+        const x = it.t.trim();
+        if (x.startsWith('"')) { ask.push(x); pieces.push([codeTag(x), L.rAsk]); }
+        else if (x) { vars.push(x); pieces.push([codeTag(x), x.endsWith('$') ? L.rInText : L.rInNum]); }
+        if (it.sep) word(it.sep, it.sep === ';' ? L.sInSemi : L.sInComma);
+      }
       out = tr('input', vars.map(codeTag).join(', '));
       if (ask.length) out += ' ' + tr('inputAsk', codeTag(ask[0]));
       break;
@@ -225,13 +550,23 @@ function explainStatement(stmt, L) {
     case 'IF': {
       const at = findWord(rest, 'THEN');
       const cond = at < 0 ? rest : rest.slice(0, at), body = at < 0 ? '' : rest.slice(at + 4);
+      keyword();
+      if (cond.trim()) pieces.push([codeTag(cond), `${L.rCond} ${describe(cond, L).html.replace(L.kCalc + ' ', '')}`]);
+      if (at >= 0) word('THEN', L.kTHEN);
       const inner = explainStatements(body, L);
-      return [`${tr('if', codeTag(cond))}<ul>${inner.map(x => `<li>${x}</li>`).join('')}</ul>${L.ifElse}`];
+      pieces.push(...inner.pieces);
+      return { part: `${tr('if', codeTag(cond))}<ul>${inner.parts.map(x => `<li>${x}</li>`).join('')}</ul>${L.ifElse}`, pieces };
     }
     case 'FOR': {
       const eq = rest.indexOf('='), to = findWord(rest, 'TO'), st = findWord(rest, 'STEP');
-      const v = rest.slice(0, eq), from = rest.slice(eq + 1, to < 0 ? undefined : to);
+      const v = eq < 0 ? rest : rest.slice(0, eq), from = eq < 0 ? '' : rest.slice(eq + 1, to < 0 ? undefined : to);
       const end = to < 0 ? '' : rest.slice(to + 2, st < 0 ? undefined : st);
+      keyword();
+      if (v.trim()) pieces.push([codeTag(v), L.rForVar]);
+      if (eq >= 0) word('=', L.sForEq);
+      value(from, 'rFrom');
+      if (to >= 0) { word('TO', L.kTO); value(end, 'rTo'); }
+      if (st >= 0) { word('STEP', L.kSTEP); value(rest.slice(st + 4), 'rStep'); }
       out = st < 0 ? tr('for', codeTag(v), codeTag(from), codeTag(end)) : tr('forStep', codeTag(v), codeTag(from), codeTag(end), codeTag(rest.slice(st + 4)));
       break;
     }
@@ -247,43 +582,37 @@ function explainStatement(stmt, L) {
     case 'RETURN': case 'CLS': case 'RANDOMIZE': case 'RESTORE': case 'STOP': case 'CLEAR': case 'RUN': case 'LIST': case 'NEW': case 'LOAD': case 'CONTINUE': case 'COPY':
       out = L[kw]; break;
     default:
-      if (/^[A-Za-z][A-Za-z0-9]*\$?\s*(\([^)]*\))?\s*=/.test(s)) return [tr('noLet', codeTag('LET ' + s))];
-      return [tr('unknown', codeTag(s))];
+      if (/^[A-Za-z][A-Za-z0-9]*\$?\s*(\([^)]*\))?\s*=/.test(s)) return { part: tr('noLet', codeTag('LET ' + s)), pieces };
+      return { part: tr('unknown', codeTag(s)), pieces };
   }
-  // Short notes about functions used inside the instruction.
-  const bare = outsideQuotes(s).toUpperCase(), notes = [];
-  const has = w => new RegExp(`(^|[^A-Z0-9])${w.replace('$', '\\$')}([^A-Z0-9$]|$)`).test(bare);
-  if (has('RND')) notes.push(L.fRND);
-  if (has('INT')) notes.push(L.fINT);
-  if (has('INKEY$')) notes.push(L.fINKEY);
-  if (has('SQR')) notes.push(L.fSQR);
-  if (has('ABS')) notes.push(L.fABS);
-  if (has('LEN')) notes.push(L.fLEN);
-  if (has('PI')) notes.push(L.fPI);
-  if (has('SIN') || has('COS')) notes.push(L.fSIN);
-  if (has('CHR$')) notes.push(L.fCHR);
-  return [notes.length ? `${out} <span class="fn-note">${notes.join(' ')}</span>` : out];
+  if (!pieces.length) {   // instructions whose values are a plain list
+    keyword();
+    if (kw === 'DEFFN') { if (rest) pieces.push([codeTag(rest), L.rValue]); }
+    else argList(rest, i => REPEAT[kw] || (ROLES[kw] || [])[i] || 'rValue');
+  }
+  return { part: out, pieces };
 }
 
 // Explains a run of instructions separated by colons. IF takes the rest of the line.
 function explainStatements(text, L) {
-  const pieces = splitTop(text, ':');
-  const out = [];
-  for (let i = 0; i < pieces.length; i++) {
-    const p = pieces[i].trim();
+  const list = splitTop(text, ':');
+  const parts = [], pieces = [];
+  const add = r => { if (!r) return; if (parts.length) pieces.push([codeTag(':'), L.sColon]); parts.push(r.part); pieces.push(...r.pieces); };
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i].trim();
     if (!p) continue;
-    if (/^REM(\s|$)/i.test(p)) { out.push(L.REM); break; }
-    if (/^IF\s/i.test(p)) { out.push(...explainStatement(pieces.slice(i).join(':'), L)); break; }
-    out.push(...explainStatement(p, L));
+    if (/^(REM|IF)(\s|$)/i.test(p)) { add(explainStatement(list.slice(i).join(':'), L)); break; }
+    add(explainStatement(p, L));
   }
-  return out;
+  return { parts, pieces };
 }
 
+// parts: one summary per instruction. pieces: every item on the line, in order, with what it means.
 export function explainLine(text, lang = 'en') {
   const L = T[lang] || T.en;
   if (!text.trim()) return null;
   const m = /^\s*(\d+)\s*(.*)$/s.exec(text);
-  if (!m) return { num: null, parts: [L.noNumber] };
-  const parts = explainStatements(m[2], L);
-  return { num: m[1], parts: parts.length ? parts : [L.empty] };
+  if (!m) return { num: null, parts: [L.noNumber], pieces: [] };
+  const r = explainStatements(m[2], L);
+  return { num: m[1], parts: r.parts.length ? r.parts : [L.empty], pieces: [[codeTag(m[1]), L.lineNum], ...r.pieces] };
 }
