@@ -1,9 +1,9 @@
-import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=9';
-import { tokenise, makeTap } from './basic.js?v=9';
-import { EXAMPLES } from './examples.js?v=9';
-import { LESSONS } from './tutorial.js?v=9';
-import { STR } from './i18n.js?v=9';
-import { explainLine } from './explain.js?v=9';
+import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=10';
+import { tokenise, makeTap } from './basic.js?v=10';
+import { EXAMPLES } from './examples.js?v=10';
+import { LESSONS } from './tutorial.js?v=10';
+import { STR } from './i18n.js?v=10';
+import { explainLine } from './explain.js?v=10';
 
 const $ = id => document.getElementById(id);
 const store = {
