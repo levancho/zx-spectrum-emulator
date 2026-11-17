@@ -74,7 +74,7 @@ label.check { color: var(--text); cursor: pointer; }
 .code-line { padding: 3px 8px; border-radius: 4px; white-space: pre; cursor: help; border-left: 3px solid transparent; }
 .code-line:hover, .code-line:focus { background: #1c2630; outline: none; }
 .code-line.active { background: #12333a; border-left-color: var(--accent); }
-.explain { min-height: 5.6em; margin: 0 0 12px; padding: 10px 12px; background: #12333a; border-left: 3px solid var(--accent); border-radius: 4px; font-size: 15px; line-height: 1.55; }
+.explain { min-height: 5.6em; max-height: 52vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #5a6068 transparent; margin: 0 0 12px; padding: 10px 12px; background: #12333a; border-left: 3px solid var(--accent); border-radius: 4px; font-size: 15px; line-height: 1.55; }
 .explain.idle { background: none; border-left-color: var(--line); color: var(--muted); }
 .explain ol, .explain ul { margin: 4px 0; padding-left: 22px; }
 .explain .pieces-title { margin: 10px 0 4px; color: var(--muted); font-size: 13px; }
@@ -83,6 +83,6 @@ label.check { color: var(--text); cursor: pointer; }
 .explain .pieces th { width: 1%; padding-right: 14px; white-space: nowrap; max-width: 12em; overflow: hidden; text-overflow: ellipsis; }
 .explain .pieces th code { color: var(--accent); font-weight: bold; }
 #explain-editor { margin: 8px 0 0; }
-.code-wrap { position: relative; flex: 1; display: flex; min-height: 320px; overflow: hidden; border-radius: 6px; }
+.code-wrap { position: relative; flex: 1; display: flex; min-height: 200px; overflow: hidden; border-radius: 6px; }
 #code-mark { position: absolute; left: 1px; right: 1px; background: #00c8c81f; border-left: 3px solid var(--accent); pointer-events: none; }
 #code-mark[hidden] { display: none; }

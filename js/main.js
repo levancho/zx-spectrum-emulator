@@ -1,9 +1,9 @@
-import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=7';
-import { tokenise, makeTap } from './basic.js?v=7';
-import { EXAMPLES } from './examples.js?v=7';
-import { LESSONS } from './tutorial.js?v=7';
-import { STR } from './i18n.js?v=7';
-import { explainLine } from './explain.js?v=7';
+import { Spectrum, SCREEN_W, SCREEN_H } from './spectrum.js?v=8';
+import { tokenise, makeTap } from './basic.js?v=8';
+import { EXAMPLES } from './examples.js?v=8';
+import { LESSONS } from './tutorial.js?v=8';
+import { STR } from './i18n.js?v=8';
+import { explainLine } from './explain.js?v=8';
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -296,16 +296,36 @@ function piecesHtml(result) {
   const rows = result.pieces.map(p => `<tr><th>${p[0]}</th><td>${p[1]}</td></tr>`).join('');
   return `<div class="pieces-title">${escapeHtml(t('piecesTitle'))}</div><table class="pieces">${rows}</table>`;
 }
+// Pointing at a line explains it. Once an explanation is showing, another line replaces it only after the
+// mouse rests on that line for a moment, so the student can move down to the explanation and scroll
+// without it changing. Scrolling the page under a still mouse changes nothing either.
+const HOVER_REST = 450;
+let hoverTimer = 0, lastX = -1, lastY = -1;
+const mouseMoved = e => e.clientX !== lastX || e.clientY !== lastY;
+document.addEventListener('pointermove', e => { lastX = e.clientX; lastY = e.clientY; });
+function hover(showing, show) {
+  clearTimeout(hoverTimer);
+  if (showing) hoverTimer = setTimeout(show, HOVER_REST); else show();
+}
+function setExplanation(box, html) {
+  if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; box.scrollTop = 0; }
+  box.className = 'explain';
+}
+function clearExplanation(box, text) {
+  box.textContent = text; box.dataset.html = ''; box.className = 'explain idle';
+}
+let lessonRow = null;
 function explain(row) {
+  clearTimeout(hoverTimer);
+  lessonRow = row;
   const on = explainOn();
   document.querySelectorAll('#lesson-code .code-line').forEach(el => el.classList.toggle('active', on && el === row));
   const box = $('explain');
-  if (!on) { box.textContent = t('explainOff'); box.className = 'explain idle'; return; }
-  if (!row) { box.textContent = t('explainHint'); box.className = 'explain idle'; return; }
+  if (!on) return clearExplanation(box, t('explainOff'));
+  if (!row) return clearExplanation(box, t('explainHint'));
   const line = LESSONS[lesson].lines[Number(row.dataset.index)];
   const num = /^\d+/.exec(line[0])[0];
-  box.innerHTML = `<strong>${escapeHtml(t('lineLabel', { n: num }))}:</strong> ${escapeHtml(line[lang === 'ka' ? 2 : 1])}${piecesHtml(explainLine(line[0], lang))}`;
-  box.className = 'explain';
+  setExplanation(box, `<strong>${escapeHtml(t('lineLabel', { n: num }))}:</strong> ${escapeHtml(line[lang === 'ka' ? 2 : 1])}${piecesHtml(explainLine(line[0], lang))}`);
 }
 function showLesson(i) {
   lesson = Math.min(LESSONS.length - 1, Math.max(0, i));
@@ -320,7 +340,9 @@ function showLesson(i) {
     row.tabIndex = 0;
     row.dataset.index = String(k);
     row.textContent = line[0];
-    for (const ev of ['pointerenter', 'focus', 'click']) row.addEventListener(ev, () => explain(row));
+    for (const ev of ['focus', 'click']) row.addEventListener(ev, () => explain(row));
+    row.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && mouseMoved(e) && row !== lessonRow) hover(lessonRow && explainOn(), () => explain(row)); });
+    row.addEventListener('pointerleave', () => clearTimeout(hoverTimer));
     box.appendChild(row);
   });
   explain(null);
@@ -353,9 +375,8 @@ function explainEditor(index) {
   const result = explainOn() && text !== undefined ? explainLine(text, lang) : null;
   if (!result) {
     mark.hidden = true;
-    box.textContent = t(explainOn() ? 'explainEditorHint' : 'explainOff');
-    box.className = 'explain idle';
-    return;
+    editorLine = -1;
+    return clearExplanation(box, t(explainOn() ? 'explainEditorHint' : 'explainOff'));
   }
   const cs = getComputedStyle(code), lh = parseFloat(cs.lineHeight);
   const top = code.offsetTop + code.clientTop + parseFloat(cs.paddingTop) + index * lh - code.scrollTop;
@@ -363,8 +384,7 @@ function explainEditor(index) {
   mark.style.top = `${top}px`;
   mark.style.height = `${lh}px`;
   const head = result.num ? `<strong>${escapeHtml(t('lineLabel', { n: result.num }))}:</strong> ` : '';
-  box.innerHTML = (result.parts.length === 1 ? head + result.parts[0] : `${head}<ol>${result.parts.map(p => `<li>${p}</li>`).join('')}</ol>`) + piecesHtml(result);
-  box.className = 'explain';
+  setExplanation(box, (result.parts.length === 1 ? head + result.parts[0] : `${head}<ol>${result.parts.map(p => `<li>${p}</li>`).join('')}</ol>`) + piecesHtml(result));
 }
 function lineAtPointer(e) {
   const cs = getComputedStyle(code);
@@ -373,9 +393,18 @@ function lineAtPointer(e) {
   return index >= 0 && index < code.value.split('\n').length ? index : -1;
 }
 const caretLine = () => code.value.slice(0, code.selectionStart).split('\n').length - 1;
-code.addEventListener('pointermove', e => { const i = lineAtPointer(e); if (i !== editorLine) explainEditor(i); });
-// The explanation stays when the mouse leaves, so the student can scroll down and read all of it.
-for (const ev of ['keyup', 'click', 'input']) code.addEventListener(ev, () => explainEditor(caretLine()));
+let hoverLine = -1;
+code.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || !mouseMoved(e) || !explainOn()) return;
+  const i = lineAtPointer(e);
+  if (i === hoverLine) return;
+  hoverLine = i;
+  clearTimeout(hoverTimer);
+  // Empty rows and the space below the program leave the current explanation alone.
+  if (i >= 0 && i !== editorLine && code.value.split('\n')[i].trim()) hover(editorLine >= 0, () => explainEditor(i));
+});
+code.addEventListener('pointerleave', () => { hoverLine = -1; clearTimeout(hoverTimer); });
+for (const ev of ['keyup', 'click', 'input']) code.addEventListener(ev, () => { clearTimeout(hoverTimer); explainEditor(caretLine()); });
 code.addEventListener('scroll', () => explainEditor(editorLine));
 
 // ---------- files ----------
